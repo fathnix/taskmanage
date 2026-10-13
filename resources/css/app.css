@@ -1,9 +1,199 @@
-@import 'tailwindcss';
-
-@source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
-@source '../../storage/framework/views/*.php';
+@import "tailwindcss";
 
 @theme {
-    --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji',
-        'Segoe UI Symbol', 'Noto Color Emoji';
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+
+  --color-pastel-blue-50: #f0f7ff;
+  --color-pastel-blue-100: #e0efff;
+  --color-pastel-blue-200: #c1ddfe;
+  --color-pastel-blue-300: #93c5fd;
+  --color-pastel-blue-400: #60a5fa;
+  --color-pastel-blue-500: #3b82f6;
+  --color-pastel-blue-600: #2563eb;
+
+  --color-pastel-green-50: #f0fdf4;
+  --color-pastel-green-100: #dcfce7;
+  --color-pastel-green-200: #bbf7d0;
+  --color-pastel-green-300: #86efac;
+  --color-pastel-green-400: #4ade80;
+  --color-pastel-green-500: #22c55e;
+  --color-pastel-green-600: #16a34a;
+
+  --color-pastel-purple-50: #faf5ff;
+  --color-pastel-purple-100: #f3e8ff;
+  --color-pastel-purple-200: #e9d5ff;
+  --color-pastel-purple-300: #d8b4fe;
+  --color-pastel-purple-400: #c084fc;
+  --color-pastel-purple-500: #a855f7;
+  --color-pastel-purple-600: #9333ea;
+
+  --color-pastel-pink-50: #fdf2f8;
+  --color-pastel-pink-100: #fce7f3;
+  --color-pastel-pink-200: #fbcfe8;
+  --color-pastel-pink-300: #f9a8d4;
+  --color-pastel-pink-400: #f472b6;
+  --color-pastel-pink-500: #ec4899;
+  --color-pastel-pink-600: #db2777;
+
+  --color-pastel-orange-50: #fff7ed;
+  --color-pastel-orange-100: #ffedd5;
+  --color-pastel-orange-200: #fed7aa;
+  --color-pastel-orange-300: #fdba74;
+  --color-pastel-orange-400: #fb923c;
+  --color-pastel-orange-500: #f97316;
+  --color-pastel-orange-600: #ea580c;
+
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-slide-up {
+    animation: slideUp 0.4s ease-out;
+  }
+
+  .animate-slide-down {
+    animation: slideDown 0.3s ease-out;
+  }
+
+  .animate-scale-in {
+    animation: scaleIn 0.2s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes scaleIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .glass-dark {
+    background: rgba(17, 17, 17, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+  }
+
+  .gradient-text {
+    background: linear-gradient(135deg, #3b82f6, #a855f7, #ec4899);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-white rounded-xl
+           bg-gradient-to-r from-primary-500 to-primary-600
+           hover:from-primary-600 hover:to-primary-700
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2
+           transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed
+           shadow-lg shadow-primary-500/25 hover:shadow-primary-500/40;
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-6 py-3 text-sm font-semibold text-neutral-700 rounded-xl
+           bg-white border border-neutral-200
+           hover:bg-neutral-50 hover:border-neutral-300
+           focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2
+           transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed
+           shadow-sm;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium text-neutral-600 rounded-lg
+           hover:bg-neutral-100 hover:text-neutral-900
+           focus:outline-none focus:ring-2 focus:ring-neutral-500 focus:ring-offset-2
+           transition-all duration-200
+           disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .input-field {
+    @apply w-full px-4 py-3.5 text-neutral-900 bg-white border border-neutral-200 rounded-xl
+           placeholder:text-neutral-400
+           focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent
+           hover:border-neutral-300
+           transition-all duration-200
+           disabled:bg-neutral-50 disabled:cursor-not-allowed;
+  }
+
+  .input-error {
+    @apply border-red-300 focus:ring-red-500;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-neutral-700 mb-2;
+  }
+
+  .card {
+    @apply bg-white rounded-2xl shadow-sm border border-neutral-100 overflow-hidden
+           transition-all duration-300
+           hover:shadow-md hover:border-neutral-200;
+  }
+
+  .card-elevated {
+    @apply bg-white rounded-2xl shadow-lg border border-neutral-100 overflow-hidden
+           transition-all duration-300;
+  }
 }

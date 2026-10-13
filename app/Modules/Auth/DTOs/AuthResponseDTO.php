@@ -1,0 +1,29 @@
+<?php
+
+namespace App\Modules\Auth\DTOs;
+
+use App\Models\User;
+
+readonly class AuthResponseDTO
+{
+    public function __construct(
+        public User $user,
+        public string $token,
+        public string $tokenType = 'Bearer',
+    ) {}
+
+    public function toArray(): array
+    {
+        return [
+            'user' => [
+                'id' => $this->user->id,
+                'name' => $this->user->name,
+                'email' => $this->user->email,
+                'email_verified_at' => $this->user->email_verified_at?->toISOString(),
+                'created_at' => $this->user->created_at->toISOString(),
+            ],
+            'token' => $this->token,
+            'token_type' => $this->tokenType,
+        ];
+    }
+}
