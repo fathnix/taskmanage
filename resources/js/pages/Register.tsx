@@ -18,6 +18,7 @@ export function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [generalError, setGeneralError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
@@ -26,9 +27,10 @@ export function Register() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value, type, checked } = e.target;
-    setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value, type } = e.target;
+    const nextValue = type === 'checkbox' ? (e.target as HTMLInputElement).checked : value;
+    setFormData(prev => ({ ...prev, [name]: nextValue }));
     if (errors[name]) {
       setErrors(prev => ({ ...prev, [name]: '' }));
     }
@@ -85,6 +87,14 @@ export function Register() {
       if (result.errors) {
         setErrors(result.errors);
       }
+    } else {
+      setSuccessMessage(result.message || 'Registration successful. Your account is waiting for admin approval.');
+      setFormData({
+        name: '',
+        email: '',
+        password: '',
+        password_confirmation: '',
+      });
     }
     
     setIsSubmitting(false);
@@ -119,6 +129,12 @@ export function Register() {
 
         <Card variant="elevated" padding="lg" className="animate-slide-up">
           <form onSubmit={handleSubmit} noValidate>
+            {successMessage && (
+              <Alert variant="success" dismissible onDismiss={() => setSuccessMessage('')} className="mb-6">
+                {successMessage}
+              </Alert>
+            )}
+
             {generalError && (
               <Alert variant="error" dismissible onDismiss={() => setGeneralError('')} className="mb-6">
                 {generalError}

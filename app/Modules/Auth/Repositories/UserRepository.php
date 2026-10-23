@@ -15,6 +15,8 @@ class UserRepository implements UserRepositoryInterface
             'name' => $dto->name,
             'email' => $dto->email,
             'password' => Hash::make($dto->password),
+            'role' => $dto->role,
+            'is_active' => false,
         ]);
     }
 

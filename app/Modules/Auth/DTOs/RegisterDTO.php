@@ -2,12 +2,15 @@
 
 namespace App\Modules\Auth\DTOs;
 
+use App\Enums\UserRole;
+
 readonly class RegisterDTO
 {
     public function __construct(
         public string $name,
         public string $email,
         public string $password,
+        public UserRole $role = UserRole::Member,
     ) {}
 
     public static function fromArray(array $data): self
@@ -16,6 +19,7 @@ readonly class RegisterDTO
             name: $data['name'],
             email: $data['email'],
             password: $data['password'],
+            role: UserRole::from($data['role'] ?? UserRole::Member->value),
         );
     }
 
@@ -25,6 +29,7 @@ readonly class RegisterDTO
             'name' => $this->name,
             'email' => $this->email,
             'password' => $this->password,
+            'role' => $this->role->value,
         ];
     }
 }

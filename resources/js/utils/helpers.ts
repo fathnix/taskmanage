@@ -29,6 +29,18 @@ export function generateId(): string {
   return Math.random().toString(36).substring(2, 15);
 }
 
+export function getInitials(name: string | null | undefined): string {
+  if (!name) return '?';
+
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+}
+
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number

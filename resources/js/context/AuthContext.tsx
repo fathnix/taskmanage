@@ -68,11 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     const response = await api.register({ name, email, password, password_confirmation: passwordConfirmation });
     
-    if (response.success && response.data) {
-      api.setToken(response.data.token);
-      setUser(response.data.user);
+    if (response.success) {
       setIsLoading(false);
-      return { success: true };
+      return { success: true, message: response.message };
     }
     
     setIsLoading(false);

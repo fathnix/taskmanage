@@ -20,12 +20,22 @@ class AuthHandler
     {
         try {
             $dto = RegisterDTO::fromArray($data);
-            $response = $this->authService->register($dto);
+            $user = $this->authService->register($dto);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Registration successful',
-                'data' => $response->toArray(),
+                'message' => 'Registration successful. Your account is waiting for admin approval.',
+                'data' => [
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => $user->role->value,
+                        'role_label' => $user->role->label(),
+                        'is_active' => $user->is_active,
+                        'created_at' => $user->created_at->toISOString(),
+                    ],
+                ],
             ], 201);
         } catch (ValidationException $e) {
             return response()->json([
@@ -56,7 +66,7 @@ class AuthHandler
         } catch (ValidationException $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Invalid credentials',
+                'message' => collect($e->errors())->flatten()->first() ?? 'Invalid credentials',
                 'errors' => $e->errors(),
             ], 401);
         } catch (\Exception $e) {
@@ -97,6 +107,9 @@ class AuthHandler
                     'id' => $user->id,
                     'name' => $user->name,
                     'email' => $user->email,
+                    'role' => $user->role->value,
+                    'role_label' => $user->role->label(),
+                    'is_active' => $user->is_active,
                     'email_verified_at' => $user->email_verified_at?->toISOString(),
                     'created_at' => $user->created_at->toISOString(),
                 ],

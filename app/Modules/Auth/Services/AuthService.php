@@ -16,7 +16,7 @@ class AuthService
         protected UserRepositoryInterface $userRepository
     ) {}
 
-    public function register(RegisterDTO $dto): AuthResponseDTO
+    public function register(RegisterDTO $dto): User
     {
         $existingUser = $this->userRepository->findByEmail($dto->email);
         if ($existingUser) {
@@ -25,10 +25,7 @@ class AuthService
             ]);
         }
 
-        $user = $this->userRepository->create($dto);
-        $token = $user->createToken('auth-token')->plainTextToken;
-
-        return new AuthResponseDTO($user, $token);
+        return $this->userRepository->create($dto);
     }
 
     public function login(LoginDTO $dto): AuthResponseDTO
@@ -38,6 +35,12 @@ class AuthService
         if (!$user || !Hash::check($dto->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
+            ]);
+        }
+
+        if (!$user->is_active) {
+            throw ValidationException::withMessages([
+                'email' => ['Your account is waiting for admin approval.'],
             ]);
         }
 

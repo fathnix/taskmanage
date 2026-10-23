@@ -1,132 +1,30 @@
-import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Logo } from '@/components/Logo';
-import {
-  PlusIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  XCircleIcon,
-  UserIcon,
-  Cog6ToothIcon,
-  Bars3Icon,
-  XMarkIcon,
-  Squares2X2Icon,
-  ClipboardDocumentListIcon,
-  FolderIcon,
-} from '@heroicons/react/24/outline';
-
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Squares2X2Icon },
-  { name: 'Tasks', href: '/tasks', icon: ClipboardDocumentListIcon },
-  { name: 'Projects', href: '/projects', icon: FolderIcon },
-];
+import { DashboardLayout } from '@/components/DashboardLayout';
+import { AdminDashboard } from '@/pages/AdminDashboard';
+import { PlusIcon, CheckCircleIcon, ClockIcon, XCircleIcon, UserIcon, Cog6ToothIcon } from '@heroicons/react/24/outline';
+import { can } from '@/utils/roles';
 
 export function Dashboard() {
-  const { user, logout, isLoading } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const { user } = useAuth();
 
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
-  };
-
-  if (isLoading) {
+  if (user?.role === 'admin') {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-neutral-50">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent" aria-label="Loading" />
-      </div>
+      <DashboardLayout>
+        <AdminDashboard />
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setSidebarOpen(true)}
-                className="md:hidden inline-flex items-center justify-center rounded-lg p-2 text-neutral-600 hover:bg-neutral-100"
-                aria-label="Open navigation"
-              >
-                <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-              </button>
-              <Link to="/dashboard">
-                <Logo />
-              </Link>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="hidden sm:block text-sm text-neutral-600">
-                {user?.name}
-              </div>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
-                <UserIcon className="h-4 w-4 mr-2" aria-hidden="true" />
-                Logout
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-7xl mx-auto flex">
-        {sidebarOpen && (
-          <div
-            className="fixed inset-0 z-40 bg-neutral-900/40 md:hidden"
-            onClick={() => setSidebarOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-
-        <aside
-          className={`fixed inset-y-0 left-0 z-50 w-64 transform bg-white border-r border-neutral-200 transition-transform duration-200 md:sticky md:top-16 md:z-0 md:h-[calc(100vh-4rem)] md:translate-x-0 ${
-            sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          }`}
-        >
-          <div className="flex h-16 items-center justify-between px-4 border-b border-neutral-200 md:hidden">
-            <Logo />
-            <button
-              type="button"
-              onClick={() => setSidebarOpen(false)}
-              className="inline-flex items-center justify-center rounded-lg p-2 text-neutral-600 hover:bg-neutral-100"
-              aria-label="Close navigation"
-            >
-              <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-            </button>
-          </div>
-
-          <nav className="p-4 space-y-1">
-            {navigation.map((item) => {
-              const isActive = location.pathname === item.href;
-              const Icon = item.icon;
-
-              return (
-                <Link
-                  key={item.name}
-                  to={item.href}
-                  onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-primary-50 text-primary-700'
-                      : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
-                  }`}
-                >
-                  <Icon className="h-5 w-5" aria-hidden="true" />
-                  {item.name}
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
-
-        <main className="flex-1 min-w-0 px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardLayout>
         <div className="mb-8 animate-fade-in">
           <h1 className="text-3xl font-bold text-neutral-900">Welcome back, {user?.name}!</h1>
-          <p className="mt-2 text-neutral-600">Here's what's happening with your tasks today.</p>
+          <p className="mt-2 text-neutral-600">
+            {user?.role === 'client'
+              ? "Here's the latest progress on your projects."
+              : "Here's what's happening with your tasks today."}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -222,24 +120,30 @@ export function Dashboard() {
           </div>
 
           <div className="space-y-6">
-            <Card variant="elevated" padding="lg">
-              <CardHeader>
-                <CardTitle>Quick Actions</CardTitle>
-                <CardDescription>Common tasks you can perform</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Button variant="primary" className="w-full justify-start gap-3">
-                    <PlusIcon className="h-5 w-5" aria-hidden="true" />
-                    Create New Task
-                  </Button>
-                  <Button variant="secondary" className="w-full justify-start gap-3">
-                    <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
-                    Settings
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
+            {(can(user?.role, 'createTasks') || can(user?.role, 'manageSettings')) && (
+              <Card variant="elevated" padding="lg">
+                <CardHeader>
+                  <CardTitle>Quick Actions</CardTitle>
+                  <CardDescription>Common tasks you can perform</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {can(user?.role, 'createTasks') && (
+                      <Button variant="primary" className="w-full justify-start gap-3">
+                        <PlusIcon className="h-5 w-5" aria-hidden="true" />
+                        Create New Task
+                      </Button>
+                    )}
+                    {can(user?.role, 'manageSettings') && (
+                      <Button variant="secondary" className="w-full justify-start gap-3">
+                        <Cog6ToothIcon className="h-5 w-5" aria-hidden="true" />
+                        Settings
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card variant="elevated" padding="lg">
               <CardHeader>
@@ -267,8 +171,6 @@ export function Dashboard() {
             </Card>
           </div>
         </div>
-      </main>
-      </div>
-    </div>
+    </DashboardLayout>
   );
 }
