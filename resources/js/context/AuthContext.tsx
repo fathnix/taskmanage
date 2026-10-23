@@ -52,6 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (response.success && response.data) {
       api.setToken(response.data.token);
       setUser(response.data.user);
+      setIsLoading(false);
       return { success: true };
     }
     
@@ -70,6 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (response.success && response.data) {
       api.setToken(response.data.token);
       setUser(response.data.user);
+      setIsLoading(false);
       return { success: true };
     }
     

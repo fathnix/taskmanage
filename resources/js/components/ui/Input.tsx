@@ -1,15 +1,19 @@
-import { forwardRef, InputHTMLAttributes, LabelHTMLAttributes, TextareaHTMLAttributes } from 'react';
+import { forwardRef, InputHTMLAttributes, LabelHTMLAttributes, TextareaHTMLAttributes, ReactNode } from 'react';
 import { cn } from '@/utils/helpers';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label?: string;
   error?: string;
   hint?: string;
+  leftIcon?: ReactNode;
+  rightIcon?: ReactNode;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, hint, className, id, ...props }, ref) => {
+  ({ label, error, hint, className, id, leftIcon, rightIcon, ...props }, ref) => {
     const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+    const hasLeftIcon = !!leftIcon;
+    const hasRightIcon = !!rightIcon;
     
     return (
       <div className="w-full">
@@ -18,14 +22,32 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {label}
           </label>
         )}
-        <input
-          ref={ref}
-          id={inputId}
-          className={cn('input-field', error && 'input-error', className)}
-          aria-invalid={error ? 'true' : 'false'}
-          aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
-          {...props}
-        />
+        <div className="relative">
+          {hasLeftIcon && (
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" aria-hidden="true">
+              {leftIcon}
+            </div>
+          )}
+          <input
+            ref={ref}
+            id={inputId}
+            className={cn(
+              'input-field',
+              error && 'input-error',
+              hasLeftIcon && 'pl-11',
+              hasRightIcon && 'pr-11',
+              className
+            )}
+            aria-invalid={error ? 'true' : 'false'}
+            aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+            {...props}
+          />
+          {hasRightIcon && (
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none" aria-hidden="true">
+              {rightIcon}
+            </div>
+          )}
+        </div>
         {error && (
           <p id={`${inputId}-error`} className="mt-1.5 text-sm text-red-600" role="alert">
             {error}

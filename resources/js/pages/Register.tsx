@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Alert } from '@/components/ui';
@@ -6,7 +6,7 @@ import { EnvelopeIcon, LockClosedIcon, UserIcon, EyeIcon, EyeSlashIcon } from '@
 
 export function Register() {
   const navigate = useNavigate();
-  const { register, isLoading } = useAuth();
+  const { register, isLoading, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -18,6 +18,12 @@ export function Register() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -73,9 +79,7 @@ export function Register() {
       formData.password_confirmation
     );
     
-    if (result.success) {
-      navigate('/dashboard');
-    } else {
+    if (!result.success) {
       setGeneralError(result.message || 'Registration failed. Please try again.');
       if (result.errors) {
         setErrors(result.errors);
@@ -133,9 +137,8 @@ export function Register() {
                 error={errors.name}
                 placeholder="John Doe"
                 disabled={isSubmitting}
-              >
-                <UserIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
-              </Input>
+                leftIcon={<UserIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />}
+              />
 
               <Input
                 label="Email address"
@@ -147,9 +150,8 @@ export function Register() {
                 error={errors.email}
                 placeholder="you@example.com"
                 disabled={isSubmitting}
-              >
-                <EnvelopeIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
-              </Input>
+                leftIcon={<EnvelopeIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />}
+              />
 
               <div className="relative">
                 <Input
@@ -162,13 +164,12 @@ export function Register() {
                   error={errors.password}
                   placeholder="Create a strong password"
                   disabled={isSubmitting}
-                >
-                  {showPassword ? (
+                  leftIcon={showPassword ? (
                     <EyeSlashIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                   ) : (
                     <LockClosedIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                   )}
-                </Input>
+                />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
@@ -215,13 +216,12 @@ export function Register() {
                   error={errors.password_confirmation}
                   placeholder="Confirm your password"
                   disabled={isSubmitting}
-                >
-                  {showConfirmPassword ? (
+                  leftIcon={showConfirmPassword ? (
                     <EyeSlashIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                   ) : (
                     <LockClosedIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                   )}
-                </Input>
+                />
                 <button
                   type="button"
                   onClick={() => setShowConfirmPassword(!showConfirmPassword)}

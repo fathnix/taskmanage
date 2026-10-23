@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Alert } from '@/components/ui';
@@ -6,7 +6,7 @@ import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/
 
 export function Login() {
   const navigate = useNavigate();
-  const { login, isLoading } = useAuth();
+  const { login, isLoading, isAuthenticated } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -16,6 +16,12 @@ export function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [generalError, setGeneralError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -52,9 +58,7 @@ export function Login() {
     
     const result = await login(formData.email, formData.password, formData.remember);
     
-    if (result.success) {
-      navigate('/dashboard');
-    } else {
+    if (!result.success) {
       setGeneralError(result.message || 'Login failed. Please try again.');
       if (result.errors) {
         setErrors(result.errors);
@@ -97,9 +101,8 @@ export function Login() {
                 placeholder="you@example.com"
                 disabled={isSubmitting}
                 aria-describedby={errors.email ? 'email-error' : undefined}
-              >
-                <EnvelopeIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
-              </Input>
+                leftIcon={<EnvelopeIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />}
+              />
 
               <div className="relative">
                 <Input
@@ -113,13 +116,12 @@ export function Login() {
                   placeholder="Enter your password"
                   disabled={isSubmitting}
                   aria-describedby={errors.password ? 'password-error' : undefined}
-                >
-                  {showPassword ? (
+                  leftIcon={showPassword ? (
                     <EyeSlashIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                   ) : (
                     <LockClosedIcon className="h-5 w-5 text-neutral-400" aria-hidden="true" />
                   )}
-                </Input>
+                />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
