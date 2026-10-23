@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Alert } from '@/components/ui';
+import { LogoMark } from '@/components/Logo';
 import { EnvelopeIcon, LockClosedIcon, UserIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export function Register() {
@@ -111,9 +112,7 @@ export function Register() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pastel-purple-50 via-white to-pastel-pink-50 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8 animate-fade-in">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-pastel-purple-500 to-pastel-pink-500 shadow-lg shadow-pastel-purple-500/25 mb-4 animate-scale-in">
-            <UserIcon className="w-10 h-10 text-white" aria-hidden="true" />
-          </div>
+          <LogoMark className="h-16 w-16 rounded-2xl mb-4 animate-scale-in" iconClassName="h-10 w-10" />
           <h1 className="text-3xl font-bold text-neutral-900">Create an account</h1>
           <p className="mt-2 text-neutral-600">Start managing your tasks today</p>
         </div>
