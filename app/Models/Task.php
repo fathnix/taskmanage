@@ -48,6 +48,11 @@ class Task extends Model
         'assigned_to_id',
         'title',
         'description',
+        'submission_description',
+        'submission_link',
+        'submission_photo',
+        'submission_difficulty',
+        'submitted_at',
         'status',
         'qa_status',
         'qa_checked_at',
@@ -63,6 +68,7 @@ class Task extends Model
     {
         return [
             'due_date' => 'date',
+            'submitted_at' => 'datetime',
             'qa_checked_at' => 'datetime',
             'approved_at' => 'datetime',
         ];

@@ -21,7 +21,7 @@ export function Logo({ className = '' }: { className?: string }) {
     <span className={`inline-flex items-center gap-2.5 ${className}`}>
       <LogoMark />
       <span className="text-xl font-bold tracking-tight text-neutral-900">
-        Manage your task
+        FlowTrack
       </span>
     </span>
   );

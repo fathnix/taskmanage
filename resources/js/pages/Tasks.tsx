@@ -25,12 +25,16 @@ import {
   isTaskOverdue,
 } from '@/utils/tasks';
 import {
+  ArrowTopRightOnSquareIcon,
   CalendarDaysIcon,
   CheckBadgeIcon,
+  CheckCircleIcon,
   ClipboardDocumentListIcon,
+  DocumentTextIcon,
   FolderIcon,
   MagnifyingGlassIcon,
   PencilSquareIcon,
+  PlayIcon,
   PlusIcon,
   ShieldCheckIcon,
   TrashIcon,
@@ -99,6 +103,15 @@ export function Tasks() {
   const [isReviewing, setIsReviewing] = useState(false);
 
   const [busyTaskId, setBusyTaskId] = useState<number | null>(null);
+
+  const [submitTarget, setSubmitTarget] = useState<Task | null>(null);
+  const [submissionDescription, setSubmissionDescription] = useState('');
+  const [evidenceLink, setEvidenceLink] = useState('');
+  const [evidencePhoto, setEvidencePhoto] = useState<File | null>(null);
+  const [difficulty, setDifficulty] = useState('');
+  const [submissionFieldErrors, setSubmissionFieldErrors] = useState<Record<string, string>>({});
+  const [submissionError, setSubmissionError] = useState('');
+  const [isSubmittingResult, setIsSubmittingResult] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -255,13 +268,80 @@ export function Tasks() {
     const response = await api.updateTaskStatus(task.id, status);
 
     if (response.success) {
-      setSuccess('Task status updated.');
+      setSuccess('Task started. Submit your result when it is done.');
       await loadTasks();
     } else {
       setError(response.message || 'Failed to update task status.');
     }
 
     setBusyTaskId(null);
+  };
+
+  const resetSubmissionForm = () => {
+    setSubmissionDescription('');
+    setEvidenceLink('');
+    setEvidencePhoto(null);
+    setDifficulty('');
+    setSubmissionFieldErrors({});
+    setSubmissionError('');
+  };
+
+  const openSubmit = (task: Task) => {
+    resetSubmissionForm();
+    setSubmitTarget(task);
+    setSuccess('');
+  };
+
+  const closeSubmit = () => {
+    if (isSubmittingResult) return;
+
+    setSubmitTarget(null);
+    resetSubmissionForm();
+  };
+
+  const handleSubmitResult = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!submitTarget) return;
+
+    const errors: Record<string, string> = {};
+
+    if (!submissionDescription.trim()) {
+      errors.submission_description = 'Describe the result of your work.';
+    }
+
+    if (!evidenceLink.trim() && !evidencePhoto) {
+      errors.evidence = 'Lampirkan minimal salah satu bukti: link atau foto.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setSubmissionFieldErrors(errors);
+
+      return;
+    }
+
+    setIsSubmittingResult(true);
+    setSubmissionError('');
+    setSubmissionFieldErrors({});
+
+    const response = await api.submitTask(submitTarget.id, {
+      submissionDescription: submissionDescription.trim(),
+      evidenceLink: evidenceLink.trim() || undefined,
+      evidencePhoto,
+      difficulty: difficulty.trim() || undefined,
+    });
+
+    if (response.success) {
+      setSubmitTarget(null);
+      resetSubmissionForm();
+      setSuccess('Task result submitted successfully.');
+      await loadTasks();
+    } else {
+      setSubmissionError(response.message || 'Failed to submit task result.');
+      setSubmissionFieldErrors(firstErrors(response.errors));
+    }
+
+    setIsSubmittingResult(false);
   };
 
   const openReview = (task: Task, mode: ReviewMode) => {
@@ -316,7 +396,7 @@ export function Tasks() {
           {isManager
             ? 'Search, create, and review tasks for your project.'
             : isQa
-              ? 'Check completed tasks and verify their quality.'
+              ? 'Work on tasks assigned to you and check completed tasks for quality.'
               : isMember
                 ? 'Update the status of tasks assigned to you.'
                 : 'Follow the latest task progress on your project.'}
@@ -393,7 +473,7 @@ export function Tasks() {
             <div className="space-y-3">
               {tasks.map((task) => {
                 const overdue = isTaskOverdue(task);
-                const memberCanUpdate = isMember
+                const assigneeCanUpdate = (isMember || isQa)
                   && task.assigned_to?.id === user?.id
                   && task.approval_status !== 'approved';
 
@@ -456,6 +536,52 @@ export function Tasks() {
                             Revision note: {task.revision_notes}
                           </p>
                         )}
+
+                        {task.submitted_at && (
+                          <div className="mt-3 rounded-lg border border-neutral-200 bg-white p-3">
+                            <p className="inline-flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                              <DocumentTextIcon className="h-4 w-4" aria-hidden="true" />
+                              Submission
+                            </p>
+
+                            {task.submission_description && (
+                              <p className="mt-1.5 text-sm text-neutral-600">{task.submission_description}</p>
+                            )}
+
+                            <div className="mt-2 flex flex-wrap items-center gap-3">
+                              {task.submission_link && (
+                                <a
+                                  href={task.submission_link}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="inline-flex items-center gap-1 text-xs font-medium text-primary-600 hover:text-primary-700"
+                                >
+                                  View evidence
+                                  <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" aria-hidden="true" />
+                                </a>
+                              )}
+
+                              {task.submission_photo_url && (
+                                <a
+                                  href={task.submission_photo_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="block"
+                                >
+                                  <img
+                                    src={task.submission_photo_url}
+                                    alt={`Evidence for ${task.title}`}
+                                    className="h-16 w-16 rounded-lg border border-neutral-200 object-cover"
+                                  />
+                                </a>
+                              )}
+                            </div>
+
+                            <p className="mt-2 text-xs text-neutral-400">
+                              Submitted {formatDate(task.submitted_at)}
+                            </p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex shrink-0 flex-wrap items-center gap-1 sm:justify-end">
@@ -480,20 +606,22 @@ export function Tasks() {
                           </Button>
                         )}
 
-                        {memberCanUpdate && (
-                          <select
-                            value={task.status}
-                            onChange={(event) => handleMemberStatus(task, event.target.value as TaskStatus)}
-                            disabled={busyTaskId === task.id}
-                            aria-label={`Update status for ${task.title}`}
-                            className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm font-medium text-neutral-700 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:opacity-50"
+                        {assigneeCanUpdate && task.status === 'pending' && (
+                          <Button
+                            size="sm"
+                            onClick={() => handleMemberStatus(task, 'in_progress')}
+                            isLoading={busyTaskId === task.id}
                           >
-                            {TASK_STATUS_OPTIONS.map((option) => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
-                            ))}
-                          </select>
+                            <PlayIcon className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                            Kerjakan
+                          </Button>
+                        )}
+
+                        {assigneeCanUpdate && task.status === 'in_progress' && (
+                          <Button size="sm" onClick={() => openSubmit(task)}>
+                            <CheckCircleIcon className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                            Tugas Selesai
+                          </Button>
                         )}
 
                         {isManager && (
@@ -634,6 +762,101 @@ export function Tasks() {
             </select>
             {fieldErrors.status && <p className="mt-1.5 text-sm text-red-600">{fieldErrors.status}</p>}
           </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={submitTarget !== null}
+        onClose={closeSubmit}
+        title="Submit Task Result"
+        description="Describe the result and attach evidence before marking the task complete."
+        size="lg"
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={closeSubmit} disabled={isSubmittingResult}>
+              Cancel
+            </Button>
+            <Button type="submit" form="submission-form" isLoading={isSubmittingResult}>
+              Kirim Hasil
+            </Button>
+          </>
+        }
+      >
+        <form id="submission-form" onSubmit={handleSubmitResult} className="space-y-5">
+          {(submissionError || submissionFieldErrors.task) && (
+            <Alert variant="error">{submissionError || submissionFieldErrors.task}</Alert>
+          )}
+
+          {submitTarget && (
+            <div className="rounded-xl bg-neutral-50 p-4">
+              <p className="font-medium text-neutral-900">{submitTarget.title}</p>
+              <p className="mt-1 text-sm text-neutral-500">
+                {submitTarget.project ? submitTarget.project.name : 'Project'}
+              </p>
+            </div>
+          )}
+
+          <Textarea
+            label="Deskripsi Hasil"
+            value={submissionDescription}
+            onChange={(event) => setSubmissionDescription(event.target.value)}
+            error={submissionFieldErrors.submission_description}
+            placeholder="Explain what you completed and how it meets the task requirements."
+            required
+          />
+
+          <div>
+            <p className="mb-2 text-sm text-neutral-600">
+              Wajib isi salah satu bukti: link atau foto.
+            </p>
+
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
+              <Input
+                label="Link Bukti (opsional)"
+                type="url"
+                value={evidenceLink}
+                onChange={(event) => setEvidenceLink(event.target.value)}
+                error={submissionFieldErrors.evidence_link}
+                placeholder="https://..."
+                hint="Boleh dikosongkan jika mengunggah foto."
+              />
+
+              <div>
+                <label className="label" htmlFor="evidence-photo">
+                  Foto Bukti (opsional)
+                </label>
+                <input
+                  id="evidence-photo"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(event) => setEvidencePhoto(event.target.files?.[0] ?? null)}
+                  className="block w-full text-sm text-neutral-600 file:mr-3 file:rounded-lg file:border-0 file:bg-primary-50 file:px-3 file:py-2 file:text-sm file:font-medium file:text-primary-700 hover:file:bg-primary-100"
+                />
+                <p className="mt-1 text-xs text-neutral-400">PNG, JPG, atau WEBP. Maks 5MB.</p>
+                {evidencePhoto && (
+                  <p className="mt-1 truncate text-xs font-medium text-primary-600">{evidencePhoto.name}</p>
+                )}
+                {submissionFieldErrors.evidence_photo && (
+                  <p className="mt-1 text-sm text-red-600">{submissionFieldErrors.evidence_photo}</p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {submissionFieldErrors.evidence && (
+            <p className="text-sm text-red-600" role="alert">
+              {submissionFieldErrors.evidence}
+            </p>
+          )}
+
+          <Textarea
+            label="Kesulitan yang Dihadapi (opsional)"
+            value={difficulty}
+            onChange={(event) => setDifficulty(event.target.value)}
+            error={submissionFieldErrors.difficulty}
+            placeholder="Ceritakan kendala yang kamu hadapi saat mengerjakan task ini."
+            hint="Kesulitan ini akan tampil di fitur Help untuk Project Manager dan QA."
+          />
         </form>
       </Modal>
 

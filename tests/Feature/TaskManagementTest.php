@@ -7,6 +7,8 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -140,7 +142,7 @@ class TaskManagementTest extends TestCase
             ->assertJsonValidationErrors('assigned_to_id');
     }
 
-    public function test_member_can_update_only_their_own_task_status(): void
+    public function test_member_can_start_only_their_own_task(): void
     {
         $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
         $member = User::factory()->create(['role' => UserRole::Member]);
@@ -154,16 +156,35 @@ class TaskManagementTest extends TestCase
         Sanctum::actingAs($member);
 
         $this->patchJson("/api/tasks/{$ownTask->id}/status", [
-            'status' => Task::STATUS_COMPLETED,
+            'status' => Task::STATUS_IN_PROGRESS,
         ])
             ->assertOk()
-            ->assertJsonPath('data.task.status', Task::STATUS_COMPLETED)
-            ->assertJsonPath('data.task.qa_status', Task::QA_STATUS_PENDING)
-            ->assertJsonPath('data.task.approval_status', Task::APPROVAL_STATUS_PENDING);
+            ->assertJsonPath('data.task.status', Task::STATUS_IN_PROGRESS);
 
         $this->patchJson("/api/tasks/{$otherTask->id}/status", [
-            'status' => Task::STATUS_COMPLETED,
+            'status' => Task::STATUS_IN_PROGRESS,
         ])->assertForbidden();
+    }
+
+    public function test_member_must_submit_evidence_instead_of_marking_a_task_complete_directly(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $member);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_IN_PROGRESS,
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->patchJson("/api/tasks/{$task->id}/status", [
+            'status' => Task::STATUS_COMPLETED,
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('status');
     }
 
     public function test_member_cannot_update_an_approved_task(): void
@@ -192,6 +213,273 @@ class TaskManagementTest extends TestCase
         ])
             ->assertStatus(422)
             ->assertJsonValidationErrors('task');
+    }
+
+    public function test_member_can_submit_a_task_result_with_a_link_and_difficulty(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $member);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_IN_PROGRESS,
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->postJson("/api/tasks/{$task->id}/submit", [
+            'submission_description' => 'Implemented the landing page and verified the responsive layout.',
+            'evidence_link' => 'https://example.com/evidence/landing-page',
+            'difficulty' => 'The CMS preview was slow during testing.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.task.status', Task::STATUS_COMPLETED)
+            ->assertJsonPath('data.task.submission_description', 'Implemented the landing page and verified the responsive layout.')
+            ->assertJsonPath('data.task.submission_link', 'https://example.com/evidence/landing-page')
+            ->assertJsonPath('data.task.submission_difficulty', 'The CMS preview was slow during testing.')
+            ->assertJsonPath('data.task.qa_status', Task::QA_STATUS_PENDING)
+            ->assertJsonPath('data.task.approval_status', Task::APPROVAL_STATUS_PENDING)
+            ->assertJsonPath('data.task.submitted_at', fn ($value) => $value !== null);
+
+        $this->assertDatabaseHas('tasks', [
+            'id' => $task->id,
+            'status' => Task::STATUS_COMPLETED,
+            'submission_description' => 'Implemented the landing page and verified the responsive layout.',
+            'submission_link' => 'https://example.com/evidence/landing-page',
+            'submission_difficulty' => 'The CMS preview was slow during testing.',
+            'submission_photo' => null,
+        ]);
+    }
+
+    public function test_member_submission_requires_a_description_and_evidence(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $member);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_IN_PROGRESS,
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->postJson("/api/tasks/{$task->id}/submit", [])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors([
+                'submission_description',
+                'evidence_link',
+                'evidence_photo',
+            ]);
+
+        $this->postJson("/api/tasks/{$task->id}/submit", [
+            'submission_description' => 'Work is complete.',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['evidence_link', 'evidence_photo']);
+
+        $this->postJson("/api/tasks/{$task->id}/submit", [
+            'evidence_link' => 'https://example.com/evidence',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('submission_description');
+    }
+
+    public function test_member_can_submit_photo_evidence(): void
+    {
+        Storage::fake('public');
+
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $member);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_IN_PROGRESS,
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->post("/api/tasks/{$task->id}/submit", [
+            'submission_description' => 'Completed the task and attached a screenshot.',
+            'evidence_photo' => UploadedFile::fake()->image('evidence.jpg', 1200, 800),
+        ], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('data.task.status', Task::STATUS_COMPLETED)
+            ->assertJsonPath('data.task.submission_photo_url', fn ($value) => is_string($value) && $value !== '');
+
+        $task->refresh();
+
+        $this->assertNotNull($task->submission_photo);
+        Storage::disk('public')->assertExists($task->submission_photo);
+    }
+
+    public function test_member_must_start_a_task_before_submitting_it(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $member);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_PENDING,
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->postJson("/api/tasks/{$task->id}/submit", [
+            'submission_description' => 'Completed the task.',
+            'evidence_link' => 'https://example.com/evidence',
+        ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors('task');
+    }
+
+    public function test_member_cannot_submit_a_task_assigned_to_someone_else(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $otherMember = User::factory()->create(['role' => UserRole::Member]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $member, $otherMember);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $otherMember->id,
+            'status' => Task::STATUS_IN_PROGRESS,
+        ]);
+
+        Sanctum::actingAs($member);
+
+        $this->postJson("/api/tasks/{$task->id}/submit", [
+            'submission_description' => "Trying to submit someone else's task.",
+            'evidence_link' => 'https://example.com/evidence',
+        ])->assertForbidden();
+    }
+
+    public function test_help_requests_are_visible_to_project_managers_and_qa_only(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $qa = User::factory()->create(['role' => UserRole::QA]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $client = User::factory()->create(['role' => UserRole::Client]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $qa, $member, $client);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_COMPLETED,
+            'submission_description' => 'Completed the work.',
+            'submission_link' => 'https://example.com/evidence',
+            'submission_difficulty' => 'The API documentation was incomplete.',
+            'submitted_at' => now(),
+        ]);
+
+        $this->task($project, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_COMPLETED,
+            'submission_description' => 'Completed without difficulties.',
+            'submitted_at' => now(),
+        ]);
+
+        Sanctum::actingAs($manager);
+
+        $this->getJson('/api/help')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.help_requests')
+            ->assertJsonPath('data.help_requests.0.task_id', $task->id)
+            ->assertJsonPath('data.help_requests.0.difficulty', 'The API documentation was incomplete.')
+            ->assertJsonPath('data.help_requests.0.assignee.id', $member->id);
+
+        Sanctum::actingAs($qa);
+
+        $this->getJson('/api/help')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.help_requests');
+
+        Sanctum::actingAs($member);
+
+        $this->getJson('/api/help')->assertForbidden();
+
+        Sanctum::actingAs($client);
+
+        $this->getJson('/api/help')->assertForbidden();
+    }
+
+    public function test_help_requests_are_scoped_to_the_primary_project(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $otherManager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $member = User::factory()->create(['role' => UserRole::Member]);
+        $otherMember = User::factory()->create(['role' => UserRole::Member]);
+        $firstProject = $this->project($manager, ['name' => 'First Project']);
+        $secondProject = $this->project($otherManager, ['name' => 'Second Project']);
+        $this->addToProject($firstProject, $member);
+        $this->addToProject($secondProject, $otherMember);
+
+        $this->task($firstProject, [
+            'assigned_to_id' => $member->id,
+            'status' => Task::STATUS_COMPLETED,
+            'submission_difficulty' => 'First project difficulty.',
+            'submitted_at' => now(),
+        ]);
+
+        $this->task($secondProject, [
+            'assigned_to_id' => $otherMember->id,
+            'status' => Task::STATUS_COMPLETED,
+            'submission_difficulty' => 'Second project difficulty.',
+            'submitted_at' => now(),
+        ]);
+
+        Sanctum::actingAs($manager);
+
+        $this->getJson('/api/help')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.help_requests')
+            ->assertJsonPath('data.help_requests.0.difficulty', 'First project difficulty.');
+
+        Sanctum::actingAs($otherManager);
+
+        $this->getJson('/api/help')
+            ->assertOk()
+            ->assertJsonCount(1, 'data.help_requests')
+            ->assertJsonPath('data.help_requests.0.difficulty', 'Second project difficulty.');
+    }
+
+    public function test_qa_can_start_and_submit_their_own_assigned_task(): void
+    {
+        $manager = User::factory()->create(['role' => UserRole::ProjectManager]);
+        $qa = User::factory()->create(['role' => UserRole::QA]);
+        $project = $this->project($manager);
+        $this->addToProject($project, $qa);
+
+        $task = $this->task($project, [
+            'assigned_to_id' => $qa->id,
+            'status' => Task::STATUS_PENDING,
+        ]);
+
+        Sanctum::actingAs($qa);
+
+        $this->patchJson("/api/tasks/{$task->id}/status", [
+            'status' => Task::STATUS_IN_PROGRESS,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.task.status', Task::STATUS_IN_PROGRESS);
+
+        $this->postJson("/api/tasks/{$task->id}/submit", [
+            'submission_description' => 'Completed the cross-browser checks.',
+            'evidence_link' => 'https://example.com/evidence/cross-browser',
+            'difficulty' => 'Safari rendered one component differently.',
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.task.status', Task::STATUS_COMPLETED)
+            ->assertJsonPath('data.task.submission_difficulty', 'Safari rendered one component differently.')
+            ->assertJsonPath('data.task.qa_status', Task::QA_STATUS_PENDING)
+            ->assertJsonPath('data.task.approval_status', Task::APPROVAL_STATUS_PENDING);
     }
 
     public function test_qa_can_check_a_completed_task(): void

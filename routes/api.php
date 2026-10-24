@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\HelpController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SettingsController;
@@ -21,6 +22,7 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::match(['put', 'patch'], '/profile', [ProfileController::class, 'update']);
+    Route::get('/help', [HelpController::class, 'index']);
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings/preferences', [SettingsController::class, 'updatePreferences']);
 
@@ -34,6 +36,7 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/tasks/{task}', [TaskController::class, 'show']);
     Route::match(['put', 'patch'], '/tasks/{task}', [TaskController::class, 'update']);
     Route::patch('/tasks/{task}/status', [TaskController::class, 'updateStatus']);
+    Route::post('/tasks/{task}/submit', [TaskController::class, 'submit']);
     Route::patch('/tasks/{task}/qa-check', [TaskController::class, 'qaCheck']);
     Route::patch('/tasks/{task}/approval', [TaskController::class, 'approval']);
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);

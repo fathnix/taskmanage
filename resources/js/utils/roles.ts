@@ -55,6 +55,7 @@ export const TASK_ROLES: UserRole[] = ['project_manager', 'qa', 'member', 'clien
 export const PROJECT_ROLES: UserRole[] = ['project_manager', 'qa', 'member', 'client'];
 export const USER_MANAGEMENT_ROLES: UserRole[] = ['project_manager', 'qa'];
 export const USER_PAGE_ROLES: UserRole[] = ['admin', ...USER_MANAGEMENT_ROLES];
+export const HELP_ROLES: UserRole[] = ['project_manager', 'qa'];
 
 export function getRoleLabel(role: UserRole | null | undefined): string {
   return role ? ROLE_LABELS[role] : '';

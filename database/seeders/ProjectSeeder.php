@@ -6,6 +6,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Str;
 
 class ProjectSeeder extends Seeder
 {
@@ -165,9 +166,16 @@ class ProjectSeeder extends Seeder
             $project->tasks()->delete();
 
             $reviewIndex = 0;
+            $submissionIndex = 0;
 
             foreach ($projectData['tasks'] as [$title, $status, $dueOffset, $assigneeRole]) {
                 $assignee = $assigneeRole === 'qa' ? $qa : $member;
+                $wasCompleted = $status === Task::STATUS_COMPLETED;
+                $submissionDescription = null;
+                $submissionLink = null;
+                $submissionPhoto = null;
+                $submissionDifficulty = null;
+                $submittedAt = null;
                 $qaStatus = Task::QA_STATUS_PENDING;
                 $qaCheckedAt = null;
                 $qaCheckedById = null;
@@ -201,10 +209,33 @@ class ProjectSeeder extends Seeder
                     }
                 }
 
+                if ($wasCompleted) {
+                    $submissionIndex++;
+                    $submissionDescription = "Delivered {$title} and verified the result against the task requirements.";
+                    $submissionLink = 'https://example.com/evidence/'.Str::slug($title);
+                    $submittedAt = now()->subDays(max(1, abs($dueOffset)));
+
+                    if ($submissionIndex % 3 === 0) {
+                        $difficulties = [
+                            'The existing design tokens were inconsistent, so several components had to be aligned manually.',
+                            'Some third-party assets were slow to load during testing and needed extra optimization.',
+                            'The requirements changed slightly during implementation, so I coordinated with the project manager.',
+                            'Testing across screen sizes took longer than expected because of a few edge cases.',
+                        ];
+                        $submissionDifficulty = $difficulties[$submissionIndex % count($difficulties)];
+                    }
+                }
+
                 Task::create([
                     'project_id' => $project->id,
                     'assigned_to_id' => $assignee->id,
                     'title' => $title,
+                    'description' => "Work on {$title} according to the project requirements.",
+                    'submission_description' => $submissionDescription,
+                    'submission_link' => $submissionLink,
+                    'submission_photo' => $submissionPhoto,
+                    'submission_difficulty' => $submissionDifficulty,
+                    'submitted_at' => $submittedAt,
                     'status' => $status,
                     'qa_status' => $qaStatus,
                     'qa_checked_at' => $qaCheckedAt,

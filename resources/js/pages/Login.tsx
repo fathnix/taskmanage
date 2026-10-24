@@ -71,10 +71,12 @@ export function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pastel-blue-50 via-white to-pastel-purple-50 px-4 py-12">
+    <div className="min-h-screen flex items-center justify-center bg-white px-4 py-12">
       <div className="w-full max-w-md">
         <div className="text-center mb-8 animate-fade-in">
-          <LogoMark className="h-16 w-16 rounded-2xl mb-4 animate-scale-in" iconClassName="h-10 w-10" />
+          <Link to="/" className="inline-block hover:opacity-90 transition-opacity" title="Kembali ke Beranda">
+            <LogoMark className="h-16 w-16 rounded-2xl mb-4 animate-scale-in" iconClassName="h-10 w-10" />
+          </Link>
           <h1 className="text-3xl font-bold text-neutral-900">Welcome back</h1>
           <p className="mt-2 text-neutral-600">Sign in to your account to continue</p>
         </div>

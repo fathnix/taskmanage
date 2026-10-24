@@ -159,7 +159,7 @@ class TaskController extends Controller
     {
         $user = $request->user();
 
-        abort_unless($user->role === UserRole::Member, 403);
+        abort_unless(in_array($user->role, [UserRole::Member, UserRole::QA], true), 403);
         $this->ensureCanViewTask($user, $task);
 
         abort_unless($task->assigned_to_id === $user->id, 403);
@@ -170,20 +170,79 @@ class TaskController extends Controller
             ]);
         }
 
-        $validated = $request->validate([
-            'status' => ['required', Rule::in(Task::STATUSES)],
+        $request->validate([
+            'status' => ['required', Rule::in([Task::STATUS_IN_PROGRESS])],
         ]);
 
-        if ($task->status !== $validated['status']) {
-            $task->fill($this->resetReviewAttributes());
+        if ($task->status !== Task::STATUS_PENDING) {
+            throw ValidationException::withMessages([
+                'status' => 'Only pending tasks can be started.',
+            ]);
         }
 
-        $task->status = $validated['status'];
+        $task->status = Task::STATUS_IN_PROGRESS;
         $task->save();
 
         return response()->json([
             'success' => true,
-            'message' => 'Task status updated successfully',
+            'message' => 'Task started successfully',
+            'data' => ['task' => $this->present($this->loadTask($task))],
+        ]);
+    }
+
+    public function submit(Request $request, Task $task): JsonResponse
+    {
+        $user = $request->user();
+
+        abort_unless(in_array($user->role, [UserRole::Member, UserRole::QA], true), 403);
+        $this->ensureCanViewTask($user, $task);
+
+        abort_unless($task->assigned_to_id === $user->id, 403);
+
+        if ($task->approval_status === Task::APPROVAL_STATUS_APPROVED) {
+            throw ValidationException::withMessages([
+                'task' => 'This task has already been approved.',
+            ]);
+        }
+
+        if ($task->status !== Task::STATUS_IN_PROGRESS) {
+            throw ValidationException::withMessages([
+                'task' => 'Start the task before submitting your result.',
+            ]);
+        }
+
+        $validated = $request->validate([
+            'submission_description' => ['required', 'string', 'max:5000'],
+            'evidence_link' => ['nullable', 'string', 'max:2048', 'url:http,https', 'required_without:evidence_photo'],
+            'evidence_photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120', 'required_without:evidence_link'],
+            'difficulty' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $oldPhoto = $task->submission_photo;
+        $photoPath = null;
+
+        if ($request->hasFile('evidence_photo')) {
+            $photoPath = $request->file('evidence_photo')->store('task-evidence', 'public');
+        }
+
+        if ($oldPhoto && $oldPhoto !== $photoPath) {
+            Storage::disk('public')->delete($oldPhoto);
+        }
+
+        $task->fill([
+            'status' => Task::STATUS_COMPLETED,
+            'submission_description' => $validated['submission_description'],
+            'submission_link' => $validated['evidence_link'] ?? null,
+            'submission_photo' => $photoPath,
+            'submission_difficulty' => $validated['difficulty'] ?? null,
+            'submitted_at' => now(),
+        ]);
+        $task->fill($this->resetReviewAttributes());
+        $task->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task result submitted successfully',
             'data' => ['task' => $this->present($this->loadTask($task))],
         ]);
     }
@@ -362,6 +421,13 @@ class TaskController extends Controller
             ] : null,
             'title' => $task->title,
             'description' => $task->description,
+            'submission_description' => $task->submission_description,
+            'submission_link' => $task->submission_link,
+            'submission_photo_url' => $task->submission_photo
+                ? Storage::disk('public')->url($task->submission_photo)
+                : null,
+            'submission_difficulty' => $task->submission_difficulty,
+            'submitted_at' => $task->submitted_at?->toISOString(),
             'status' => $task->status,
             'due_date' => $task->due_date?->toDateString(),
             'assigned_to' => $task->assignee ? $this->presentUser($task->assignee) : null,

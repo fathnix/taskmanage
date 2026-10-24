@@ -10,6 +10,7 @@ import {
   ClipboardDocumentListIcon,
   Cog6ToothIcon,
   FolderIcon,
+  LifebuoyIcon,
   PencilSquareIcon,
   Squares2X2Icon,
   UserCircleIcon,
@@ -19,6 +20,7 @@ import {
 import {
   ADMIN_ROLES,
   ALL_ROLES,
+  HELP_ROLES,
   USER_MANAGEMENT_ROLES,
   PROJECT_ROLES,
   TASK_ROLES,
@@ -55,6 +57,7 @@ const navigation: NavigationItem[] = [
   },
   { name: 'Project Managers', href: '/users', icon: UsersIcon, roles: ADMIN_ROLES },
   { name: 'Users', href: '/users', icon: UsersIcon, roles: USER_MANAGEMENT_ROLES },
+  { name: 'Help', href: '/help', icon: LifebuoyIcon, roles: HELP_ROLES },
   { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, roles: ALL_ROLES },
 ];
 
@@ -105,7 +108,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-white">
       <header className="bg-white border-b border-neutral-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">

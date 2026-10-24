@@ -188,6 +188,32 @@ class ApiService {
     });
   }
 
+  async submitTask(id: number, data: TaskSubmissionPayload) {
+    const formData = new FormData();
+    formData.append('submission_description', data.submissionDescription);
+
+    if (data.evidenceLink) {
+      formData.append('evidence_link', data.evidenceLink);
+    }
+
+    if (data.evidencePhoto) {
+      formData.append('evidence_photo', data.evidencePhoto);
+    }
+
+    if (data.difficulty) {
+      formData.append('difficulty', data.difficulty);
+    }
+
+    return this.request<{ task: Task }>(`/tasks/${id}/submit`, {
+      method: 'POST',
+      body: formData,
+    });
+  }
+
+  async getHelpRequests() {
+    return this.request<{ help_requests: HelpRequest[] }>('/help');
+  }
+
   async checkTaskByQa(id: number) {
     return this.request<{ task: Task }>(`/tasks/${id}/qa-check`, {
       method: 'PATCH',
@@ -405,6 +431,11 @@ export interface Task {
   project: { id: number; name: string } | null;
   title: string;
   description: string | null;
+  submission_description: string | null;
+  submission_link: string | null;
+  submission_photo_url: string | null;
+  submission_difficulty: string | null;
+  submitted_at: string | null;
   status: TaskStatus;
   due_date: string | null;
   assigned_to: TaskUser | null;
@@ -440,6 +471,29 @@ export interface TaskPayload {
 export interface TaskReviewPayload {
   approval_status: 'approved' | 'revision';
   revision_notes?: string | null;
+}
+
+export interface TaskSubmissionPayload {
+  submissionDescription: string;
+  evidenceLink?: string;
+  evidencePhoto?: File | null;
+  difficulty?: string;
+}
+
+export interface HelpRequest {
+  id: number;
+  task_id: number;
+  title: string;
+  project: { id: number; name: string } | null;
+  assignee: TaskUser | null;
+  difficulty: string;
+  submission_description: string | null;
+  submission_link: string | null;
+  submission_photo_url: string | null;
+  submitted_at: string | null;
+  status: TaskStatus;
+  qa_status: TaskQaStatus;
+  approval_status: TaskApprovalStatus;
 }
 
 export const api = new ApiService();

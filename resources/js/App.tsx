@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute, PublicRoute, RoleRoute } from '@/components/auth/Routes';
-import { PROJECT_ROLES, TASK_ROLES, USER_PAGE_ROLES } from '@/utils/roles';
+import { HELP_ROLES, PROJECT_ROLES, TASK_ROLES, USER_PAGE_ROLES } from '@/utils/roles';
+import { Landing } from '@/pages/Landing';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
 import { Dashboard } from '@/pages/Dashboard';
 import { Settings } from '@/pages/Settings';
+import { Help } from '@/pages/Help';
 import { Projects } from '@/pages/Projects';
 import { Tasks } from '@/pages/Tasks';
 import { Users } from '@/pages/Users';
@@ -14,6 +16,8 @@ function AppRoutes() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<Landing />} />
+
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
@@ -40,6 +44,14 @@ function AppRoutes() {
             }
           />
           <Route
+            path="/help"
+            element={
+              <RoleRoute allowed={HELP_ROLES}>
+                <Help />
+              </RoleRoute>
+            }
+          />
+          <Route
             path="/projects"
             element={
               <RoleRoute allowed={PROJECT_ROLES}>
@@ -49,8 +61,7 @@ function AppRoutes() {
           />
         </Route>
 
-        <Route path="/" element={<Navigate to="/dashboard" replace />} />
-        <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );
