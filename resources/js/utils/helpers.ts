@@ -41,11 +41,23 @@ export function getInitials(name: string | null | undefined): string {
     .toUpperCase();
 }
 
+export function firstErrors(errors?: Record<string, string[]>): Record<string, string> {
+  const result: Record<string, string> = {};
+
+  Object.entries(errors ?? {}).forEach(([key, messages]) => {
+    if (messages[0]) {
+      result[key] = messages[0];
+    }
+  });
+
+  return result;
+}
+
 export function debounce<T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout | null = null;
+  let timeout: ReturnType<typeof setTimeout> | null = null;
   return (...args: Parameters<T>) => {
     if (timeout) clearTimeout(timeout);
     timeout = setTimeout(() => func(...args), wait);

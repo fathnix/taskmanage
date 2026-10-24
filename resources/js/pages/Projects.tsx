@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react';
 import { DashboardLayout } from '@/components/DashboardLayout';
+import { ProjectDetail } from '@/components/projects/ProjectDetail';
 import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
+import { useAuth } from '@/context/AuthContext';
 import { api, type Project, type ProjectHealth } from '@/services/api';
 import { formatDate, getInitials } from '@/utils/helpers';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_STYLES } from '@/utils/projects';
 import {
   CalendarDaysIcon,
   CheckCircleIcon,
@@ -30,6 +33,7 @@ const progressStyles: Record<ProjectHealth['status'], string> = {
 };
 
 export function Projects() {
+  const { user } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
@@ -56,6 +60,46 @@ export function Projects() {
   const needsAttention = projects.filter(
     (project) => project.health.status === 'at_risk' || project.health.status === 'off_track'
   ).length;
+
+  if (user?.role === 'project_manager') {
+    return (
+      <DashboardLayout>
+        <div className="mb-8 animate-fade-in">
+          <h1 className="text-3xl font-bold text-neutral-900">My Project</h1>
+          <p className="mt-2 text-neutral-600">
+            View your project details, budget, timeline, and delivery statistics.
+          </p>
+        </div>
+
+        {error && (
+          <Alert variant="error" dismissible onDismiss={() => setError('')} className="mb-6">
+            {error}
+          </Alert>
+        )}
+
+        {isLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent" aria-label="Loading" />
+          </div>
+        ) : projects.length === 0 ? (
+          <Card variant="elevated" padding="lg">
+            <div className="py-12 text-center">
+              <p className="text-sm font-medium text-neutral-700">No project assigned yet.</p>
+              <p className="mt-1 text-sm text-neutral-500">
+                Ask an admin to assign you as the project manager for a project.
+              </p>
+            </div>
+          </Card>
+        ) : (
+          <ProjectDetail
+            project={projects[0]}
+            canEdit
+            onUpdated={(updated) => setProjects([updated])}
+          />
+        )}
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -129,8 +173,8 @@ export function Projects() {
                       <div className="min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <CardTitle>{project.name}</CardTitle>
-                          <span className="rounded-full bg-neutral-100 px-2.5 py-0.5 text-xs font-medium capitalize text-neutral-600">
-                            {project.status}
+                          <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${PROJECT_STATUS_STYLES[project.status]}`}>
+                            {PROJECT_STATUS_LABELS[project.status]}
                           </span>
                         </div>
                         <CardDescription>{project.description || 'No description'}</CardDescription>
@@ -154,12 +198,14 @@ export function Projects() {
                           {project.project_manager?.name || 'Unassigned'}
                         </p>
                       </div>
-                      {project.due_date && (
-                        <div className="ml-auto hidden items-center gap-1.5 text-xs text-neutral-500 sm:flex">
-                          <CalendarDaysIcon className="h-4 w-4" aria-hidden="true" />
-                          {formatDate(project.due_date)}
-                        </div>
-                      )}
+                      <div className="ml-auto hidden items-center gap-1.5 text-xs text-neutral-500 sm:flex">
+                        <CalendarDaysIcon className="h-4 w-4" aria-hidden="true" />
+                        {project.is_indefinite
+                          ? 'Indefinite'
+                          : project.end_date
+                            ? formatDate(project.end_date)
+                            : 'No end date'}
+                      </div>
                     </div>
 
                     <div className="mt-5">

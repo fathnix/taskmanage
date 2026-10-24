@@ -1,11 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute, PublicRoute, RoleRoute } from '@/components/auth/Routes';
-import { PROJECT_ROLES, TASK_ROLES, ADMIN_ROLES } from '@/utils/roles';
+import { PROJECT_ROLES, TASK_ROLES, USER_PAGE_ROLES } from '@/utils/roles';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
 import { Dashboard } from '@/pages/Dashboard';
+import { Settings } from '@/pages/Settings';
 import { Projects } from '@/pages/Projects';
+import { Tasks } from '@/pages/Tasks';
 import { Users } from '@/pages/Users';
 
 function AppRoutes() {
@@ -19,10 +21,12 @@ function AppRoutes() {
 
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/profile" element={<Navigate to="/settings?tab=profile" replace />} />
+          <Route path="/settings" element={<Settings />} />
           <Route
             path="/users"
             element={
-              <RoleRoute allowed={ADMIN_ROLES}>
+              <RoleRoute allowed={USER_PAGE_ROLES}>
                 <Users />
               </RoleRoute>
             }
@@ -31,7 +35,7 @@ function AppRoutes() {
             path="/tasks"
             element={
               <RoleRoute allowed={TASK_ROLES}>
-                <Dashboard />
+                <Tasks />
               </RoleRoute>
             }
           />

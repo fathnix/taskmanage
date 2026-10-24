@@ -6,8 +6,11 @@ import { getInitials } from '@/utils/helpers';
 import {
   ArrowRightOnRectangleIcon,
   Bars3Icon,
+  ChevronDownIcon,
   ClipboardDocumentListIcon,
+  Cog6ToothIcon,
   FolderIcon,
+  PencilSquareIcon,
   Squares2X2Icon,
   UserCircleIcon,
   UsersIcon,
@@ -16,6 +19,7 @@ import {
 import {
   ADMIN_ROLES,
   ALL_ROLES,
+  USER_MANAGEMENT_ROLES,
   PROJECT_ROLES,
   TASK_ROLES,
   getRoleLabel,
@@ -23,11 +27,35 @@ import {
   type UserRole,
 } from '@/utils/roles';
 
-const navigation: { name: string; href: string; icon: typeof Squares2X2Icon; roles: UserRole[] }[] = [
+interface NavigationChild {
+  name: string;
+  href: string;
+  icon: typeof Squares2X2Icon;
+  roles: UserRole[];
+}
+
+interface NavigationItem {
+  name: string;
+  href?: string;
+  icon: typeof Squares2X2Icon;
+  roles: UserRole[];
+  children?: NavigationChild[];
+}
+
+const navigation: NavigationItem[] = [
   { name: 'Dashboard', href: '/dashboard', icon: Squares2X2Icon, roles: ALL_ROLES },
-  { name: 'List User', href: '/users', icon: UsersIcon, roles: ADMIN_ROLES },
-  { name: 'Tasks', href: '/tasks', icon: ClipboardDocumentListIcon, roles: TASK_ROLES },
-  { name: 'Projects', href: '/projects', icon: FolderIcon, roles: PROJECT_ROLES },
+  {
+    name: 'Project',
+    icon: FolderIcon,
+    roles: PROJECT_ROLES,
+    children: [
+      { name: 'Overview', href: '/projects', icon: FolderIcon, roles: PROJECT_ROLES },
+      { name: 'Tasks', href: '/tasks', icon: ClipboardDocumentListIcon, roles: TASK_ROLES },
+    ],
+  },
+  { name: 'Project Managers', href: '/users', icon: UsersIcon, roles: ADMIN_ROLES },
+  { name: 'Users', href: '/users', icon: UsersIcon, roles: USER_MANAGEMENT_ROLES },
+  { name: 'Settings', href: '/settings', icon: Cog6ToothIcon, roles: ALL_ROLES },
 ];
 
 export function DashboardLayout({ children }: { children: ReactNode }) {
@@ -36,6 +64,7 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({ Project: true });
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -62,7 +91,13 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
     };
   }, [profileOpen]);
 
-  const visibleNavigation = navigation.filter((item) => hasRoleAccess(user?.role, item.roles));
+  const visibleNavigation = navigation
+    .filter((item) => hasRoleAccess(user?.role, item.roles))
+    .map((item) => ({
+      ...item,
+      children: item.children?.filter((child) => hasRoleAccess(user?.role, child.roles)),
+    }))
+    .filter((item) => !item.children || item.children.length > 0);
 
   const handleLogout = async () => {
     await logout();
@@ -101,7 +136,15 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                 aria-label="Profile"
                 title="Profile"
               >
-                <UserCircleIcon className="h-7 w-7" aria-hidden="true" />
+                {user?.avatar_url ? (
+                  <img
+                    src={user.avatar_url}
+                    alt={user.name}
+                    className="h-7 w-7 rounded-full object-cover"
+                  />
+                ) : (
+                  <UserCircleIcon className="h-7 w-7" aria-hidden="true" />
+                )}
                 {!profileOpen && (
                   <span className="pointer-events-none absolute right-0 top-full mt-1 whitespace-nowrap rounded-lg bg-neutral-900 px-2.5 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">
                     Profile
@@ -115,15 +158,31 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
                   className="absolute right-0 top-full z-50 mt-2 w-72 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-xl"
                 >
                   <div className="flex items-center gap-3 p-4">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-100 text-base font-semibold text-primary-700">
-                      {getInitials(user?.name)}
-                    </span>
+                    {user?.avatar_url ? (
+                      <img
+                        src={user.avatar_url}
+                        alt={user.name}
+                        className="h-12 w-12 shrink-0 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-primary-100 text-base font-semibold text-primary-700">
+                        {getInitials(user?.name)}
+                      </span>
+                    )}
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-neutral-900">{user?.name}</p>
                       <p className="truncate text-sm text-neutral-500">{user?.email}</p>
                     </div>
                   </div>
                   <div className="border-t border-neutral-100 p-2">
+                    <Link
+                      to="/settings?tab=profile"
+                      onClick={() => setProfileOpen(false)}
+                      className="mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
+                    >
+                      <PencilSquareIcon className="h-4 w-4" aria-hidden="true" />
+                      Edit Profile
+                    </Link>
                     <button
                       type="button"
                       onClick={() => {
@@ -171,13 +230,71 @@ export function DashboardLayout({ children }: { children: ReactNode }) {
 
           <nav className="p-4 space-y-1">
             {visibleNavigation.map((item) => {
-              const isActive = location.pathname === item.href;
               const Icon = item.icon;
+
+              if (item.children) {
+                const isGroupActive = item.children.some((child) => location.pathname === child.href);
+                const isOpen = openGroups[item.name] ?? isGroupActive;
+
+                return (
+                  <div key={item.name}>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setOpenGroups((current) => ({
+                          ...current,
+                          [item.name]: !(current[item.name] ?? isGroupActive),
+                        }))
+                      }
+                      aria-expanded={isOpen}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                        isGroupActive
+                          ? 'bg-primary-50 text-primary-700'
+                          : 'text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5" aria-hidden="true" />
+                      <span className="flex-1 text-left">{item.name}</span>
+                      <ChevronDownIcon
+                        className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+                        aria-hidden="true"
+                      />
+                    </button>
+
+                    {isOpen && (
+                      <div className="ml-4 mt-1 space-y-1 border-l border-neutral-200 pl-3">
+                        {item.children.map((child) => {
+                          const ChildIcon = child.icon;
+                          const isChildActive = location.pathname === child.href;
+
+                          return (
+                            <Link
+                              key={child.name}
+                              to={child.href}
+                              onClick={() => setSidebarOpen(false)}
+                              className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                                isChildActive
+                                  ? 'bg-primary-50 text-primary-700'
+                                  : 'text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900'
+                              }`}
+                            >
+                              <ChildIcon className="h-4 w-4" aria-hidden="true" />
+                              {child.name}
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              const isActive = location.pathname === item.href;
 
               return (
                 <Link
                   key={item.name}
-                  to={item.href}
+                  to={item.href ?? '#'}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                     isActive

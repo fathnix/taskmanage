@@ -8,6 +8,7 @@ use App\Modules\Auth\DTOs\LoginDTO;
 use App\Modules\Auth\DTOs\AuthResponseDTO;
 use App\Modules\Auth\Services\AuthService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 class AuthHandler
@@ -33,6 +34,7 @@ class AuthHandler
                         'role' => $user->role->value,
                         'role_label' => $user->role->label(),
                         'is_active' => $user->is_active,
+                        'avatar_url' => $user->avatar ? Storage::disk('public')->url($user->avatar) : null,
                         'created_at' => $user->created_at->toISOString(),
                     ],
                 ],
@@ -110,6 +112,7 @@ class AuthHandler
                     'role' => $user->role->value,
                     'role_label' => $user->role->label(),
                     'is_active' => $user->is_active,
+                    'avatar_url' => $user->avatar ? Storage::disk('public')->url($user->avatar) : null,
                     'email_verified_at' => $user->email_verified_at?->toISOString(),
                     'created_at' => $user->created_at->toISOString(),
                 ],

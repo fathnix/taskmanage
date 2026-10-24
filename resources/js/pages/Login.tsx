@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import { Button, Input, Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter, Alert } from '@/components/ui';
+import { Button, Input, Card, CardFooter, Alert } from '@/components/ui';
 import { LogoMark } from '@/components/Logo';
+import { firstErrors } from '@/utils/helpers';
 import { EnvelopeIcon, LockClosedIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 export function Login() {
@@ -62,7 +63,7 @@ export function Login() {
     if (!result.success) {
       setGeneralError(result.message || 'Login failed. Please try again.');
       if (result.errors) {
-        setErrors(result.errors);
+        setErrors(firstErrors(result.errors));
       }
     }
     

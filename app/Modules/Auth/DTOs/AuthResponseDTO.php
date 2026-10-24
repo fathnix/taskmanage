@@ -3,6 +3,7 @@
 namespace App\Modules\Auth\DTOs;
 
 use App\Models\User;
+use Illuminate\Support\Facades\Storage;
 
 readonly class AuthResponseDTO
 {
@@ -22,6 +23,7 @@ readonly class AuthResponseDTO
                 'role' => $this->user->role->value,
                 'role_label' => $this->user->role->label(),
                 'is_active' => $this->user->is_active,
+                'avatar_url' => $this->user->avatar ? Storage::disk('public')->url($this->user->avatar) : null,
                 'email_verified_at' => $this->user->email_verified_at?->toISOString(),
                 'created_at' => $this->user->created_at->toISOString(),
             ],

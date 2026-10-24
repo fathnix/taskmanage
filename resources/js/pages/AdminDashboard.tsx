@@ -1,35 +1,36 @@
 import { useEffect, useState } from 'react';
 import { Alert, Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui';
-import { api, type AdminUser } from '@/services/api';
-import { ROLE_OPTIONS } from '@/utils/roles';
+import { api, type Project, type ProjectHealth } from '@/services/api';
+import { PROJECT_STATUS_LABELS, PROJECT_STATUS_STYLES } from '@/utils/projects';
 import {
   ChartBarIcon,
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
   FolderIcon,
-  UserMinusIcon,
-  UsersIcon,
 } from '@heroicons/react/24/outline';
 
+const healthStyles: Record<ProjectHealth['status'], string> = {
+  on_track: 'bg-pastel-green-100 text-pastel-green-700',
+  completed: 'bg-pastel-green-100 text-pastel-green-700',
+  at_risk: 'bg-pastel-orange-100 text-pastel-orange-700',
+  off_track: 'bg-red-100 text-red-700',
+  in_progress: 'bg-pastel-blue-100 text-pastel-blue-700',
+  not_started: 'bg-neutral-100 text-neutral-600',
+};
+
 export function AdminDashboard() {
-  const [users, setUsers] = useState<AdminUser[]>([]);
-  const [totalProjects, setTotalProjects] = useState(0);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
     const loadDashboard = async () => {
-      const [usersResponse, projectsResponse] = await Promise.all([
-        api.getUsers(),
-        api.getProjects(),
-      ]);
+      const response = await api.getProjects();
 
-      if (usersResponse.success && usersResponse.data) {
-        setUsers(usersResponse.data.users);
+      if (response.success && response.data) {
+        setProjects(response.data.projects);
       } else {
-        setError(usersResponse.message || 'Failed to load dashboard data.');
-      }
-
-      if (projectsResponse.success && projectsResponse.data) {
-        setTotalProjects(projectsResponse.data.projects.length);
+        setError(response.message || 'Failed to load dashboard data.');
       }
 
       setIsLoading(false);
@@ -38,39 +39,38 @@ export function AdminDashboard() {
     loadDashboard();
   }, []);
 
-  const totalUsers = users.length;
-  const activeUsers = users.filter((user) => user.is_active).length;
-  const inactiveUsers = totalUsers - activeUsers;
-  const productivity = totalUsers > 0 ? Math.round((activeUsers / totalUsers) * 100) : 0;
-
-  const activeWorkload = ROLE_OPTIONS.map((role) => ({
-    role: role.label,
-    count: users.filter((user) => user.role === role.value && user.is_active).length,
-  }));
-  const maxWorkload = Math.max(1, ...activeWorkload.map((item) => item.count));
+  const onTrack = projects.filter(
+    (project) => project.health.status === 'on_track' || project.health.status === 'completed',
+  ).length;
+  const needsAttention = projects.filter(
+    (project) => project.health.status === 'at_risk' || project.health.status === 'off_track',
+  ).length;
+  const averageProgress = projects.length > 0
+    ? Math.round(projects.reduce((total, project) => total + project.progress, 0) / projects.length)
+    : 0;
 
   const stats = [
     {
       label: 'Total Projects',
-      value: totalProjects,
+      value: projects.length,
       icon: FolderIcon,
       color: 'bg-pastel-blue-100 text-pastel-blue-600',
     },
     {
-      label: 'Active Users',
-      value: activeUsers,
-      icon: UsersIcon,
+      label: 'On Track',
+      value: onTrack,
+      icon: CheckCircleIcon,
       color: 'bg-pastel-green-100 text-pastel-green-600',
     },
     {
-      label: 'Inactive Users',
-      value: inactiveUsers,
-      icon: UserMinusIcon,
+      label: 'Needs Attention',
+      value: needsAttention,
+      icon: ExclamationTriangleIcon,
       color: 'bg-pastel-orange-100 text-pastel-orange-600',
     },
     {
-      label: 'Productivity',
-      value: `${productivity}%`,
+      label: 'Average Progress',
+      value: `${averageProgress}%`,
       icon: ChartBarIcon,
       color: 'bg-pastel-purple-100 text-pastel-purple-600',
     },
@@ -81,7 +81,7 @@ export function AdminDashboard() {
       <div className="mb-8 animate-fade-in">
         <h1 className="text-3xl font-bold text-neutral-900">Admin Dashboard</h1>
         <p className="mt-2 text-neutral-600">
-          Overview of projects, users, and team workload.
+          Project ownership and health across the team.
         </p>
       </div>
 
@@ -93,11 +93,11 @@ export function AdminDashboard() {
 
       {isLoading ? (
         <div className="flex items-center justify-center py-24">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-primary-500 border-t-transparent" aria-label="Loading" />
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary-500 border-t-transparent" aria-label="Loading" />
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="mb-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat, index) => {
               const Icon = stat.icon;
 
@@ -114,7 +114,7 @@ export function AdminDashboard() {
                       <p className="text-sm font-medium text-neutral-500">{stat.label}</p>
                       <p className="mt-1 text-3xl font-bold text-neutral-900">{stat.value}</p>
                     </div>
-                    <div className={`p-3 rounded-xl ${stat.color}`}>
+                    <div className={`rounded-xl p-3 ${stat.color}`}>
                       <Icon className="h-6 w-6" aria-hidden="true" />
                     </div>
                   </div>
@@ -123,70 +123,76 @@ export function AdminDashboard() {
             })}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card variant="elevated" padding="lg">
-              <CardHeader>
-                <CardTitle>Productivity Metrics</CardTitle>
-                <CardDescription>Active accounts across the team</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="mb-4 flex items-end justify-between">
-                  <div>
-                    <p className="text-4xl font-bold text-neutral-900">{productivity}%</p>
-                    <p className="text-sm text-neutral-500">of accounts are active</p>
-                  </div>
-                  <span className="rounded-full bg-pastel-green-100 px-3 py-1 text-xs font-medium text-pastel-green-700">
-                    {activeUsers} active
-                  </span>
+          <Card variant="elevated" padding="lg">
+            <CardHeader>
+              <CardTitle>Projects</CardTitle>
+              <CardDescription>Project managers and current project health</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {projects.length === 0 ? (
+                <div className="py-12 text-center">
+                  <FolderIcon className="mx-auto h-10 w-10 text-neutral-300" aria-hidden="true" />
+                  <p className="mt-3 text-sm font-medium text-neutral-700">No projects yet</p>
+                  <p className="mt-1 text-sm text-neutral-500">
+                    Projects will appear here once a project manager is assigned.
+                  </p>
                 </div>
-                <div className="h-3 w-full overflow-hidden rounded-full bg-neutral-100">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-pastel-green-400 to-pastel-green-600 transition-all duration-500"
-                    style={{ width: `${productivity}%` }}
-                  />
-                </div>
-                <div className="mt-6 grid grid-cols-3 gap-4 text-center">
-                  <div>
-                    <p className="text-lg font-semibold text-neutral-900">{totalUsers}</p>
-                    <p className="text-xs text-neutral-500">Total users</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-pastel-green-600">{activeUsers}</p>
-                    <p className="text-xs text-neutral-500">Active</p>
-                  </div>
-                  <div>
-                    <p className="text-lg font-semibold text-pastel-orange-600">{inactiveUsers}</p>
-                    <p className="text-xs text-neutral-500">Inactive</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+              ) : (
+                <div className="space-y-3">
+                  {projects.map((project) => (
+                    <div
+                      key={project.id}
+                      className="rounded-xl border border-neutral-100 bg-neutral-50 p-4 transition-colors hover:border-neutral-200 hover:bg-white"
+                    >
+                      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-medium text-neutral-900">{project.name}</p>
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${PROJECT_STATUS_STYLES[project.status]}`}>
+                              {PROJECT_STATUS_LABELS[project.status]}
+                            </span>
+                            <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${healthStyles[project.health.status]}`}>
+                              {project.health.label}
+                            </span>
+                          </div>
+                          <p className="mt-1 text-sm text-neutral-500">
+                            PM: {project.project_manager?.name ?? 'Unassigned'}
+                            {project.project_manager?.email ? ` · ${project.project_manager.email}` : ''}
+                          </p>
+                        </div>
 
-            <Card variant="elevated" padding="lg">
-              <CardHeader>
-                <CardTitle>Workload Distribution</CardTitle>
-                <CardDescription>Active users grouped by role</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {activeWorkload.map((item) => (
-                    <div key={item.role}>
-                      <div className="mb-1.5 flex items-center justify-between text-sm">
-                        <span className="font-medium text-neutral-700">{item.role}</span>
-                        <span className="text-neutral-500">{item.count}</span>
+                        <div className="grid grid-cols-3 gap-4 text-center lg:min-w-[18rem]">
+                          <div>
+                            <p className="text-lg font-semibold text-neutral-900">{project.progress}%</p>
+                            <p className="text-xs text-neutral-500">Progress</p>
+                          </div>
+                          <div>
+                            <p className="text-lg font-semibold text-neutral-900">
+                              {project.task_counts.completed}/{project.task_counts.total}
+                            </p>
+                            <p className="text-xs text-neutral-500">Tasks</p>
+                          </div>
+                          <div>
+                            <p className={`text-lg font-semibold ${project.task_counts.overdue > 0 ? 'text-red-600' : 'text-neutral-900'}`}>
+                              {project.task_counts.overdue}
+                            </p>
+                            <p className="text-xs text-neutral-500">Overdue</p>
+                          </div>
+                        </div>
                       </div>
-                      <div className="h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
+
+                      <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-neutral-200/60">
                         <div
                           className="h-full rounded-full bg-gradient-to-r from-primary-400 to-primary-600 transition-all duration-500"
-                          style={{ width: `${(item.count / maxWorkload) * 100}%` }}
+                          style={{ width: `${project.progress}%` }}
                         />
                       </div>
                     </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
     </>

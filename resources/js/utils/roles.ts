@@ -41,17 +41,20 @@ export const ROLE_LABELS: Record<UserRole, string> = {
 };
 
 const ROLE_PERMISSIONS: Record<UserRole, RolePermission[]> = {
-  admin: ['viewProjects', 'manageSettings'],
+  admin: ['manageSettings'],
   project_manager: ['viewProjects', 'viewTasks', 'createTasks', 'manageSettings'],
   qa: ['viewProjects', 'viewTasks'],
-  member: ['viewProjects', 'viewTasks', 'createTasks'],
-  client: ['viewProjects'],
+  member: ['viewProjects', 'viewTasks'],
+  client: ['viewProjects', 'viewTasks'],
 };
 
 export const ALL_ROLES: UserRole[] = ['admin', 'project_manager', 'qa', 'member', 'client'];
 export const ADMIN_ROLES: UserRole[] = ['admin'];
-export const TASK_ROLES: UserRole[] = ['project_manager', 'qa', 'member'];
-export const PROJECT_ROLES: UserRole[] = ALL_ROLES;
+export const MANAGER_ROLES: UserRole[] = ['project_manager'];
+export const TASK_ROLES: UserRole[] = ['project_manager', 'qa', 'member', 'client'];
+export const PROJECT_ROLES: UserRole[] = ['project_manager', 'qa', 'member', 'client'];
+export const USER_MANAGEMENT_ROLES: UserRole[] = ['project_manager', 'qa'];
+export const USER_PAGE_ROLES: UserRole[] = ['admin', ...USER_MANAGEMENT_ROLES];
 
 export function getRoleLabel(role: UserRole | null | undefined): string {
   return role ? ROLE_LABELS[role] : '';
