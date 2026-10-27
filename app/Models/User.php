@@ -31,6 +31,11 @@ class User extends Authenticatable
         return $this->hasMany(Project::class, 'project_manager_id');
     }
 
+    public function timeLogs(): HasMany
+    {
+        return $this->hasMany(TimeLog::class);
+    }
+
     public function primaryProjectId(): ?int
     {
         if ($this->role === UserRole::Admin) {

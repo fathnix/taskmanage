@@ -1,7 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from '@/context/AuthContext';
 import { ProtectedRoute, PublicRoute, RoleRoute } from '@/components/auth/Routes';
-import { HELP_ROLES, PROJECT_ROLES, TASK_ROLES, USER_PAGE_ROLES } from '@/utils/roles';
+import { ADMIN_ROLES, HELP_ROLES, PROJECT_ROLES, TASK_ROLES, USER_PAGE_ROLES } from '@/utils/roles';
 import { Landing } from '@/pages/Landing';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
@@ -11,6 +11,7 @@ import { Help } from '@/pages/Help';
 import { Projects } from '@/pages/Projects';
 import { Tasks } from '@/pages/Tasks';
 import { Users } from '@/pages/Users';
+import { TimeReport } from '@/pages/TimeReport';
 
 function AppRoutes() {
   return (
@@ -56,6 +57,14 @@ function AppRoutes() {
             element={
               <RoleRoute allowed={PROJECT_ROLES}>
                 <Projects />
+              </RoleRoute>
+            }
+          />
+          <Route
+            path="/time-report"
+            element={
+              <RoleRoute allowed={ADMIN_ROLES}>
+                <TimeReport />
               </RoleRoute>
             }
           />

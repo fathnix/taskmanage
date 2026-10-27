@@ -167,6 +167,20 @@ class ApiService {
     return this.request<{ assignees: TaskUser[] }>('/tasks/assignees');
   }
 
+  async createTimeLog(data: TimeLogPayload) {
+    return this.request<{ time_log: TimeLog }>(`/time-logs`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async getTimeReport(filters: TimeReportFilters) {
+    const params = new URLSearchParams(
+      Object.entries(filters).filter(([, value]) => value !== undefined && value !== ''),
+    );
+    return this.request<TimeReport>(`/admin/time-report?${params.toString()}`);
+  }
+
   async createTask(data: TaskPayload) {
     return this.request<{ task: Task }>('/tasks', {
       method: 'POST',
@@ -466,6 +480,47 @@ export interface TaskPayload {
   status?: TaskStatus;
   assigned_to_id: number;
   due_date: string | null;
+}
+
+export interface TimeLogPayload {
+  task_id: number;
+  duration_minutes: number;
+  logged_on: string;
+  note: string | null;
+}
+
+export interface TimeLog {
+  id: number;
+  user_id: number;
+  task_id: number;
+  duration_minutes: number;
+  logged_on: string;
+  note: string | null;
+}
+
+export interface TimeReportFilters {
+  from: string;
+  to: string;
+  user_id?: string;
+  project_id?: string;
+}
+
+export interface TimeReport {
+  filters: { from: string; to: string };
+  summary: { total_minutes: number; total_hours: number; log_count: number };
+  member_totals: Array<{ id: number; name: string; total_minutes: number; total_hours: number }>;
+  project_totals: Array<{ id: number; name: string; total_minutes: number; total_hours: number }>;
+  logs: Array<{
+    id: number;
+    user: { id: number; name: string };
+    project: { id: number; name: string };
+    task: { id: number; title: string };
+    duration_minutes: number;
+    logged_on: string;
+    note: string | null;
+  }>;
+  users: Array<{ id: number; name: string }>;
+  projects: Array<{ id: number; name: string }>;
 }
 
 export interface TaskReviewPayload {

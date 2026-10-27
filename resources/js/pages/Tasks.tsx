@@ -13,7 +13,7 @@ import {
 } from '@/components/ui';
 import { useAuth } from '@/context/AuthContext';
 import { api, type Task, type TaskPayload, type TaskStats, type TaskStatus, type TaskUser } from '@/services/api';
-import { firstErrors, formatDate, getInitials } from '@/utils/helpers';
+import { firstErrors, formatDate, getInitials, getLocalDateString } from '@/utils/helpers';
 import {
   APPROVAL_STATUS_LABELS,
   APPROVAL_STATUS_STYLES,
@@ -39,6 +39,7 @@ import {
   ShieldCheckIcon,
   TrashIcon,
   XCircleIcon,
+  ClockIcon,
 } from '@heroicons/react/24/outline';
 
 interface TaskFormState {
@@ -112,6 +113,13 @@ export function Tasks() {
   const [submissionFieldErrors, setSubmissionFieldErrors] = useState<Record<string, string>>({});
   const [submissionError, setSubmissionError] = useState('');
   const [isSubmittingResult, setIsSubmittingResult] = useState(false);
+  const [timeLogTarget, setTimeLogTarget] = useState<Task | null>(null);
+  const [timeLogDuration, setTimeLogDuration] = useState('60');
+  const [timeLogDate, setTimeLogDate] = useState(getLocalDateString());
+  const [timeLogNote, setTimeLogNote] = useState('');
+  const [timeLogError, setTimeLogError] = useState('');
+  const [timeLogErrors, setTimeLogErrors] = useState<Record<string, string>>({});
+  const [isSavingTimeLog, setIsSavingTimeLog] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -344,6 +352,35 @@ export function Tasks() {
     setIsSubmittingResult(false);
   };
 
+  const handleTimeLogSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!timeLogTarget) return;
+
+    setIsSavingTimeLog(true);
+    setTimeLogError('');
+    setTimeLogErrors({});
+
+    const response = await api.createTimeLog({
+      task_id: timeLogTarget.id,
+      duration_minutes: Number(timeLogDuration),
+      logged_on: timeLogDate,
+      note: timeLogNote.trim() || null,
+    });
+
+    if (response.success) {
+      setTimeLogTarget(null);
+      setTimeLogNote('');
+      setTimeLogDuration('60');
+      setSuccess('Work time recorded successfully.');
+    } else {
+      setTimeLogError(response.message || 'Failed to record work time.');
+      setTimeLogErrors(firstErrors(response.errors));
+    }
+
+    setIsSavingTimeLog(false);
+  };
+
   const openReview = (task: Task, mode: ReviewMode) => {
     setReviewTarget(task);
     setReviewMode(mode);
@@ -476,6 +513,7 @@ export function Tasks() {
                 const assigneeCanUpdate = (isMember || isQa)
                   && task.assigned_to?.id === user?.id
                   && task.approval_status !== 'approved';
+                const canRecordTime = (isMember || isQa) && task.assigned_to?.id === user?.id;
 
                 return (
                   <div
@@ -621,6 +659,22 @@ export function Tasks() {
                           <Button size="sm" onClick={() => openSubmit(task)}>
                             <CheckCircleIcon className="mr-1.5 h-4 w-4" aria-hidden="true" />
                             Tugas Selesai
+                          </Button>
+                        )}
+
+                        {canRecordTime && (
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                              setTimeLogTarget(task);
+                              setTimeLogDate(getLocalDateString());
+                              setTimeLogError('');
+                              setTimeLogErrors({});
+                            }}
+                          >
+                            <ClockIcon className="mr-1.5 h-4 w-4" aria-hidden="true" />
+                            Catat Waktu
                           </Button>
                         )}
 
@@ -856,6 +910,58 @@ export function Tasks() {
             error={submissionFieldErrors.difficulty}
             placeholder="Ceritakan kendala yang kamu hadapi saat mengerjakan task ini."
             hint="Kesulitan ini akan tampil di fitur Help untuk Project Manager dan QA."
+          />
+        </form>
+      </Modal>
+
+      <Modal
+        open={timeLogTarget !== null}
+        onClose={() => {
+          if (!isSavingTimeLog) setTimeLogTarget(null);
+        }}
+        title="Catat Waktu Kerja"
+        description={timeLogTarget?.title}
+        footer={(
+          <>
+            <Button type="button" variant="secondary" onClick={() => setTimeLogTarget(null)} disabled={isSavingTimeLog}>
+              Batal
+            </Button>
+            <Button type="submit" form="time-log-form" isLoading={isSavingTimeLog}>
+              Simpan Catatan
+            </Button>
+          </>
+        )}
+      >
+        <form id="time-log-form" onSubmit={handleTimeLogSubmit} className="space-y-5">
+          {timeLogError && <Alert variant="error">{timeLogError}</Alert>}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <Input
+              label="Durasi (menit)"
+              type="number"
+              min="1"
+              max="1440"
+              value={timeLogDuration}
+              onChange={(event) => setTimeLogDuration(event.target.value)}
+              error={timeLogErrors.duration_minutes}
+              required
+            />
+            <Input
+              label="Tanggal kerja"
+              type="date"
+              max={getLocalDateString()}
+              value={timeLogDate}
+              onChange={(event) => setTimeLogDate(event.target.value)}
+              error={timeLogErrors.logged_on}
+              required
+            />
+          </div>
+          <Textarea
+            label="Catatan (opsional)"
+            value={timeLogNote}
+            onChange={(event) => setTimeLogNote(event.target.value)}
+            error={timeLogErrors.note}
+            maxLength={500}
+            placeholder="Ringkasan pekerjaan yang dilakukan"
           />
         </form>
       </Modal>

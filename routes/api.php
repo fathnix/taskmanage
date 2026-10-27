@@ -1,11 +1,13 @@
 <?php
 
+use App\Http\Controllers\Admin\TimeReportController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\HelpController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\TimeLogController;
 use App\Modules\Auth\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,9 +41,11 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::patch('/tasks/{task}/qa-check', [TaskController::class, 'qaCheck']);
     Route::patch('/tasks/{task}/approval', [TaskController::class, 'approval']);
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy']);
+    Route::post('/time-logs', [TimeLogController::class, 'store']);
 });
 
 Route::middleware(['auth:sanctum', 'active'])->prefix('admin')->group(function () {
+    Route::get('/time-report', [TimeReportController::class, 'index']);
     Route::get('/users', [UserController::class, 'index']);
     Route::post('/users', [UserController::class, 'store']);
     Route::get('/users/{user}', [UserController::class, 'show']);
