@@ -25,7 +25,6 @@ Route::middleware(['auth:sanctum', 'active'])->group(function () {
     Route::get('/help', [HelpController::class, 'index']);
     Route::get('/settings', [SettingsController::class, 'show']);
     Route::patch('/settings/preferences', [SettingsController::class, 'updatePreferences']);
-
     Route::get('/projects', [ProjectController::class, 'index']);
     Route::get('/projects/{project}', [ProjectController::class, 'show']);
     Route::match(['put', 'patch'], '/projects/{project}', [ProjectController::class, 'update']);
