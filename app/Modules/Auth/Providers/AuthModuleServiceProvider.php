@@ -2,11 +2,11 @@
 
 namespace App\Modules\Auth\Providers;
 
-use Illuminate\Support\ServiceProvider;
+use App\Modules\Auth\Handlers\AuthHandler;
 use App\Modules\Auth\Interfaces\UserRepositoryInterface;
 use App\Modules\Auth\Repositories\UserRepository;
 use App\Modules\Auth\Services\AuthService;
-use App\Modules\Auth\Handlers\AuthHandler;
+use Illuminate\Support\ServiceProvider;
 
 class AuthModuleServiceProvider extends ServiceProvider
 {

@@ -3,9 +3,8 @@
 namespace App\Modules\Auth\Handlers;
 
 use App\Models\User;
-use App\Modules\Auth\DTOs\RegisterDTO;
 use App\Modules\Auth\DTOs\LoginDTO;
-use App\Modules\Auth\DTOs\AuthResponseDTO;
+use App\Modules\Auth\DTOs\RegisterDTO;
 use App\Modules\Auth\Services\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Storage;

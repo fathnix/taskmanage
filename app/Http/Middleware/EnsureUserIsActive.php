@@ -10,7 +10,7 @@ class EnsureUserIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && !$request->user()->is_active) {
+        if ($request->user() && ! $request->user()->is_active) {
             return response()->json([
                 'success' => false,
                 'message' => 'Your account has been deactivated. Please contact an admin.',

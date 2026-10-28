@@ -3,9 +3,9 @@
 namespace App\Modules\Auth\Services;
 
 use App\Models\User;
-use App\Modules\Auth\DTOs\RegisterDTO;
-use App\Modules\Auth\DTOs\LoginDTO;
 use App\Modules\Auth\DTOs\AuthResponseDTO;
+use App\Modules\Auth\DTOs\LoginDTO;
+use App\Modules\Auth\DTOs\RegisterDTO;
 use App\Modules\Auth\Interfaces\UserRepositoryInterface;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -32,13 +32,13 @@ class AuthService
     {
         $user = $this->userRepository->findByEmail($dto->email);
 
-        if (!$user || !Hash::check($dto->password, $user->password)) {
+        if (! $user || ! Hash::check($dto->password, $user->password)) {
             throw ValidationException::withMessages([
                 'email' => ['The provided credentials are incorrect.'],
             ]);
         }
 
-        if (!$user->is_active) {
+        if (! $user->is_active) {
             throw ValidationException::withMessages([
                 'email' => ['Your account is waiting for admin approval.'],
             ]);

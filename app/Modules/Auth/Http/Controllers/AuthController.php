@@ -3,7 +3,6 @@
 namespace App\Modules\Auth\Http\Controllers;
 
 use App\Http\Controllers\Controller;
-use App\Models\User;
 use App\Modules\Auth\Handlers\AuthHandler;
 use App\Modules\Auth\Http\Requests\LoginRequest;
 use App\Modules\Auth\Http\Requests\RegisterRequest;
